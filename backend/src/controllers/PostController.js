@@ -30,18 +30,41 @@ module.exports = {
         const mat = cv.imread(req.file.path);
         const imgHLS = mat.cvtColor(cv.COLOR_BGR2HLS);
         //cv.imwrite(req.file.path, imgHLS);
-         const rangeMask = imgHLS.inRange(skinColorLower(0), skinColorUpper(15));
-        //cv.imwrite(req.file.path, rangeMask);
+         const rangeMask = imgHLS.inRange(skinColorLower(0), skinColorUpper(24));
 
-        // remove noise
+        // Remove o ruido
         const blurred = rangeMask.blur(new cv.Size(10, 10));
-        //cv.imwrite(req.file.path, blurred);
-        const thresholded = blurred.threshold(
+        
+        //Cria a mascara binário, a partir da imagem sem ruido e redimencionada para 260x260
+        const thresholded = blurred.resize(260,260).threshold(
           200,
           255,
           cv.THRESH_BINARY
         );
+        cv.imwrite(req.file.path, thresholded);
+        //Pega os valores de cada pixel da imagem e gera uma matriz 
+        const matAsMatrix = thresholded.getDataAsArray();
+        //Essa matriz de pixels é convertida em um array
+        var matAsArray = [];
+        for (var i = 0; i < matAsMatrix.length; i++){
+            matAsArray = matAsArray.concat(matAsMatrix[i]);
+        }
+        //E assim normalizo os dados para assim ocupar menos memória
+        const arrayNormalized = matAsArray.map(function(num) {
+            return num === 255 ? 1 : 0;
+        });
 
+        const buffer = Buffer.from(arrayNormalized);
+
+
+        //console.log(matAsArray);
+
+        //Cria um txt e escreve nele o resultado do array 
+        fs.writeFile('dados260.txt', arrayNormalized, function (err) {
+            if (err) 
+                return console.log(err);
+            console.log('Dados gerados com sucesso!');
+        });
         
 
         //gera o contorno da mão
@@ -194,7 +217,7 @@ module.exports = {
             { thickness: 2 }
         );
         
-        cv.imwrite(req.file.path, mat); 
+        //cv.imwrite(req.file.path, mat); 
         
         
         
@@ -202,8 +225,8 @@ module.exports = {
 
         // //Redimenciona a imagem recebida e salva na pasta resided em upload
         await sharp(req.file.path) //req.file.path
-            .resize(500)
-            .jpeg({ quality: 70 })
+            //.resize(500)
+            //.jpeg({ quality: 70 })
             .toFile(
                 path.resolve(req.file.destination, 'resized', fileName)
             )
@@ -217,6 +240,7 @@ module.exports = {
         const post = await Post.create({
             sign,
             image: fileName,
+            binarry: buffer,
         });
 
         //envia uma mensagem aos usuarios através de websocket
