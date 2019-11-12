@@ -36,7 +36,7 @@ module.exports = {
         const blurred = rangeMask.blur(new cv.Size(10, 10));
         
         //Cria a mascara binário, a partir da imagem sem ruido e redimencionada para 260x260
-        const thresholded = blurred.resize(260,260).threshold(
+        const thresholded = blurred.resize(50,50).threshold(
           200,
           255,
           cv.THRESH_BINARY
